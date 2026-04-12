@@ -1,0 +1,11 @@
+# Root workspace noise that should not affect git stats or Codex counters.
+.npm-cache/
+
+# Local Python environment artifacts.
+backend_fastapi/venv/
+backend_fastapi/__pycache__/
+backend_fastapi/**/*.pyc
+backend_fastapi/.env
+
+# Local frontend artifacts outside the nested repo workflow.
+qamqorly2/test_write.txt
