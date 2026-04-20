@@ -5,7 +5,7 @@ from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from api.routes import admin, auth, bookings, caregivers, lang, messages, profile, quality, reviews, users
+from api.routes import admin, auth, bookings, caregivers, lang, messages, profile, quality, reviews, users, verification_documents
 from core.config import settings
 from db.session import Base, engine
 
@@ -53,6 +53,7 @@ api_router.include_router(reviews.router, prefix='/reviews', tags=['reviews'])
 api_router.include_router(quality.router, prefix='/quality-updates', tags=['quality-updates'])
 api_router.include_router(lang.router, prefix='/lang', tags=['lang'])
 api_router.include_router(admin.router, prefix='/admin', tags=['admin'])
+api_router.include_router(verification_documents.router, prefix='/verification-documents', tags=['verification-documents'])
 
 app.include_router(api_router, prefix=settings.API_V1_STR)
 

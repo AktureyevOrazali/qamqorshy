@@ -26,6 +26,18 @@ class VerificationStatus(str, enum.Enum):
     PENDING = "PENDING"
     VERIFIED = "VERIFIED"
 
+
+class VerificationDocumentType(str, enum.Enum):
+    ID_CARD = "ID_CARD"
+    DIPLOMA = "DIPLOMA"
+    CERTIFICATE = "CERTIFICATE"
+
+
+class VerificationDocumentStatus(str, enum.Enum):
+    PENDING = "PENDING"
+    APPROVED = "APPROVED"
+    REJECTED = "REJECTED"
+
 def generate_uuid():
     return str(uuid.uuid4())
 
@@ -52,6 +64,11 @@ class User(Base):
     writtenReviews = relationship("Review", back_populates="author", foreign_keys="Review.authorId", cascade="all, delete-orphan")
     receivedReviews = relationship("Review", back_populates="caregiver", foreign_keys="Review.caregiverId", cascade="all, delete-orphan")
     ignoredBookings = relationship("IgnoredBooking", back_populates="caregiver", cascade="all, delete-orphan")
+    reviewedVerificationDocuments = relationship(
+        "VerificationDocument",
+        back_populates="reviewedBy",
+        foreign_keys="VerificationDocument.reviewedByUserId",
+    )
 
 
 class ClientProfile(Base):
@@ -79,6 +96,11 @@ class CaregiverProfile(Base):
     verifiedAt = Column(DateTime(timezone=True), nullable=True)
 
     user = relationship("User", back_populates="caregiver")
+    verificationDocuments = relationship(
+        "VerificationDocument",
+        back_populates="caregiverProfile",
+        cascade="all, delete-orphan",
+    )
 
 
 class CareRecipient(Base):
@@ -176,5 +198,55 @@ class IgnoredBooking(Base):
 
     booking = relationship("Booking", back_populates="ignoredBy")
     caregiver = relationship("User", back_populates="ignoredBookings")
+
+
+class VerificationDocument(Base):
+    __tablename__ = "verification_documents"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    caregiverProfileId = Column(
+        String(36),
+        ForeignKey("caregiver_profiles.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    documentType = Column(Enum(VerificationDocumentType), nullable=False)
+    fileUrl = Column(String, nullable=False)
+    originalFileName = Column(String, nullable=True)
+    mimeType = Column(String, nullable=True)
+    status = Column(
+        Enum(VerificationDocumentStatus),
+        default=VerificationDocumentStatus.PENDING,
+        nullable=False,
+    )
+    adminComment = Column(String, nullable=True)
+    reviewedByUserId = Column(String(36), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    reviewedAt = Column(DateTime(timezone=True), nullable=True)
+    createdAt = Column(DateTime(timezone=True), default=get_now)
+    updatedAt = Column(DateTime(timezone=True), default=get_now, onupdate=get_now)
+
+    caregiverProfile = relationship("CaregiverProfile", back_populates="verificationDocuments")
+    reviewedBy = relationship(
+        "User",
+        back_populates="reviewedVerificationDocuments",
+        foreign_keys=[reviewedByUserId],
+    )
+
+
+def derive_caregiver_verification_status(documents):
+    if not documents:
+        return VerificationStatus.UNVERIFIED
+
+    required_types = {VerificationDocumentType.ID_CARD, VerificationDocumentType.DIPLOMA}
+    docs_by_type = {doc.documentType: doc for doc in documents}
+
+    if not required_types.issubset(docs_by_type.keys()):
+        return VerificationStatus.PENDING
+
+    required_docs = [docs_by_type[doc_type] for doc_type in required_types]
+    if all(doc.status == VerificationDocumentStatus.APPROVED for doc in required_docs):
+        return VerificationStatus.VERIFIED
+
+    return VerificationStatus.PENDING
 
 

@@ -1,10 +1,12 @@
+from typing import Literal
+
 from fastapi import APIRouter, Response
 from pydantic import BaseModel
 
 router = APIRouter()
 
 class LangRequest(BaseModel):
-    lang: str
+    lang: Literal["en", "ru", "kz"]
 
 @router.post("")
 def set_language(request: LangRequest, response: Response):

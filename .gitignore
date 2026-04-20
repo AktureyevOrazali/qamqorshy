@@ -1,5 +1,6 @@
 # Root workspace noise that should not affect git stats or Codex counters.
 .npm-cache/
+.worktrees/
 
 # Local Python environment artifacts.
 backend_fastapi/venv/

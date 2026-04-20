@@ -1,5 +1,7 @@
 from typing import Any, List
+
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
 from sqlalchemy.orm import Session, joinedload
 
 from api import deps
@@ -7,6 +9,10 @@ from db.models import User, UserRole, CaregiverProfile, VerificationStatus, Book
 from schemas.profile import CaregiverProfile as CaregiverProfileSchema
 
 router = APIRouter()
+
+
+class CaregiverVerificationUpdate(BaseModel):
+    status: VerificationStatus
 
 
 @router.get("/admin", response_model=List[dict])
@@ -21,7 +27,10 @@ def get_all_caregivers_admin(
 
     caregivers = (
         db.query(CaregiverProfile)
-        .options(joinedload(CaregiverProfile.user))
+        .options(
+            joinedload(CaregiverProfile.user),
+            joinedload(CaregiverProfile.verificationDocuments),
+        )
         .offset(skip)
         .limit(limit)
         .all()
@@ -36,6 +45,7 @@ def get_all_caregivers_admin(
                     "fullName": caregiver.user.fullName,
                     "email": caregiver.user.email,
                     "caregiver": CaregiverProfileSchema.model_validate(caregiver),
+                    "verificationDocumentsCount": len(caregiver.verificationDocuments),
                 }
             )
     return result
@@ -44,14 +54,10 @@ def get_all_caregivers_admin(
 @router.put("/admin/{user_id}/verify")
 def verify_caregiver_admin(
     user_id: str,
-    status_data: dict,
+    status_data: CaregiverVerificationUpdate,
     db: Session = Depends(deps.get_db),
     current_user: User = Depends(deps.get_current_user),
 ) -> Any:
-    status = status_data.get("status")
-    if not status:
-        raise HTTPException(status_code=400, detail="Status is required")
-
     if current_user.role != UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Not enough permissions")
 
@@ -59,8 +65,8 @@ def verify_caregiver_admin(
     if not cg_profile:
         raise HTTPException(status_code=404, detail="Caregiver profile not found")
 
-    cg_profile.verificationStatus = status
-    if status == VerificationStatus.VERIFIED:
+    cg_profile.verificationStatus = status_data.status
+    if status_data.status == VerificationStatus.VERIFIED:
         cg_profile.verifiedAt = get_now()
     else:
         cg_profile.verifiedAt = None

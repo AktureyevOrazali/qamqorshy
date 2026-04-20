@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation'
 import { requireUser } from '@/lib/auth'
 import { getLangFromCookies } from '@/lib/i18n'
 import CaregiverVerifyTable from '@/components/admin/caregiver-verify-table'
-import { getBackendUrl } from '@/lib/api'
+import { getAdminVerificationDocuments, getBackendUrl } from '@/lib/api'
 import { cookies } from 'next/headers'
 
 export default async function AdminPage() {
@@ -15,7 +15,7 @@ export default async function AdminPage() {
   const store = await cookies()
   const token = store.get('qamqorshy_session')?.value
 
-  const [statsRes, caregiversRes] = await Promise.all([
+  const [statsRes, caregiversRes, verificationDocsRes] = await Promise.all([
     fetch(getBackendUrl('/api/admin/stats'), {
       headers: { Authorization: `Bearer ${token}` },
       cache: 'no-store',
@@ -24,6 +24,7 @@ export default async function AdminPage() {
       headers: { Authorization: `Bearer ${token}` },
       cache: 'no-store',
     }),
+    getAdminVerificationDocuments(token || ''),
   ])
 
   if (!statsRes.ok || !caregiversRes.ok) {
@@ -32,6 +33,7 @@ export default async function AdminPage() {
 
   const { usersCount, bookingsCount, reviewsCount } = await statsRes.json()
   const caregivers = await caregiversRes.json()
+  const verificationDocuments = verificationDocsRes.documents
 
   const tx = {
     ru: {
@@ -78,7 +80,7 @@ export default async function AdminPage() {
 
       <h2 className="mt-10 font-serif text-2xl font-semibold text-[#2d3147] sm:text-3xl md:mt-12">{tx.specialistVerification}</h2>
       <div className="mt-4 md:mt-6">
-        <CaregiverVerifyTable initial={caregivers} />
+        <CaregiverVerifyTable initial={caregivers} verificationDocuments={verificationDocuments} />
       </div>
     </section>
   )

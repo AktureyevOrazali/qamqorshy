@@ -33,6 +33,17 @@ def _serialize_profile(current_user: User) -> dict[str, Any]:
             "categories": current_user.caregiver.categories,
             "idCardUrl": current_user.caregiver.idCardUrl,
             "diplomaUrl": current_user.caregiver.diplomaUrl,
+            "verificationDocuments": [
+                {
+                    "id": doc.id,
+                    "documentType": doc.documentType,
+                    "fileUrl": doc.fileUrl,
+                    "status": doc.status,
+                    "adminComment": doc.adminComment,
+                    "reviewedAt": doc.reviewedAt,
+                }
+                for doc in current_user.caregiver.verificationDocuments
+            ],
         }
 
     return user_data

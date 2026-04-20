@@ -2,7 +2,7 @@
 import { requireUser } from '@/lib/auth'
 import { getDictionary, getLangFromCookies } from '@/lib/i18n'
 import ProfileForm from '@/components/profile/profile-form'
-import { getBackendUrl } from '@/lib/api'
+import { getBackendUrl, getMyVerificationDocuments } from '@/lib/api'
 import { cookies } from 'next/headers'
 
 export default async function ProfilePage() {
@@ -13,7 +13,7 @@ export default async function ProfilePage() {
   const store = await cookies()
   const token = store.get('qamqorshy_session')?.value
 
-  const [profileRes, dashboardRes] = await Promise.all([
+  const [profileRes, dashboardRes, verificationDocsRes] = await Promise.all([
     fetch(getBackendUrl('/api/profile'), {
       headers: { Authorization: `Bearer ${token}` },
       cache: 'no-store',
@@ -22,6 +22,7 @@ export default async function ProfilePage() {
       headers: { Authorization: `Bearer ${token}` },
       cache: 'no-store',
     }),
+    getMyVerificationDocuments(token || ''),
   ])
 
   if (!profileRes.ok || !dashboardRes.ok) {
@@ -30,6 +31,7 @@ export default async function ProfilePage() {
 
   const fullUser = await profileRes.json()
   const { bookings } = await dashboardRes.json()
+  const verificationDocuments = verificationDocsRes.documents
 
   const tx = {
     ru: {
@@ -79,6 +81,7 @@ export default async function ProfilePage() {
           verificationStatus={fullUser.caregiver?.verificationStatus || 'UNVERIFIED'}
           idCardUrl={fullUser.caregiver?.idCardUrl || ''}
           diplomaUrl={fullUser.caregiver?.diplomaUrl || ''}
+          verificationDocuments={verificationDocuments}
           dict={dict}
         />
 

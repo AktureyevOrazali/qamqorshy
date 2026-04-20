@@ -1,19 +1,24 @@
-from typing import Optional
-from pydantic import BaseModel
 from datetime import datetime
+from typing import Optional
+
+from pydantic import BaseModel, Field, field_validator
+
 from db.models import VerificationStatus
+
 
 class ClientProfileUpdate(BaseModel):
     address: Optional[str] = None
     about: Optional[str] = None
 
+
 class CaregiverProfileUpdate(BaseModel):
     bio: Optional[str] = None
-    experienceYears: Optional[int] = None
-    hourlyRate: Optional[int] = None
+    experienceYears: Optional[int] = Field(default=None, ge=0)
+    hourlyRate: Optional[int] = Field(default=None, ge=0)
     categories: Optional[str] = None
     idCardUrl: Optional[str] = None
     diplomaUrl: Optional[str] = None
+
 
 class ClientProfile(BaseModel):
     id: str
@@ -23,6 +28,7 @@ class ClientProfile(BaseModel):
 
     class Config:
         from_attributes = True
+
 
 class CaregiverProfile(BaseModel):
     id: str
@@ -39,14 +45,23 @@ class CaregiverProfile(BaseModel):
     class Config:
         from_attributes = True
 
+
 class ProfileUpdateRequest(BaseModel):
     fullName: Optional[str] = None
     phone: Optional[str] = None
     address: Optional[str] = None
     about: Optional[str] = None
     bio: Optional[str] = None
-    experienceYears: Optional[int] = None
-    hourlyRate: Optional[int] = None
+    experienceYears: Optional[int] = Field(default=None, ge=0)
+    hourlyRate: Optional[int] = Field(default=None, ge=0)
     categories: Optional[str] = None
     idCardUrl: Optional[str] = None
     diplomaUrl: Optional[str] = None
+
+    @field_validator("fullName", "phone", "address", "about", "bio", "categories", "idCardUrl", "diplomaUrl")
+    @classmethod
+    def strip_string_fields(cls, value: Optional[str]) -> Optional[str]:
+        if value is None:
+            return value
+        value = value.strip()
+        return value or None
